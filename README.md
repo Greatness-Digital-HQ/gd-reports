@@ -34,3 +34,22 @@ curl -X POST https://reports.greatnessdigital.com/api/reports/publish \
 ```
 
 Then visit `https://reports.greatnessdigital.com/test-client/2026-07` and confirm it renders.
+
+## Known gotchas
+
+**This Vercel project is not git-connected.** It's deployed by running `vercel --prod`
+from whatever local folder has this code, same as it always has been. If you push a fix
+here, it does **not** go live on its own — someone still has to run `vercel --prod`
+(or connect this repo under Project Settings -> Git so pushes deploy automatically,
+which would close this gap for good).
+
+**Next.js caches every `fetch()` call by URL, including ones made inside dependencies.**
+`[client]/[month]/route.js` reads the published report via `@vercel/blob`'s `list()` and
+then `fetch()`s the blob's URL directly. Because `publishReport` always overwrites the
+same blob path (`addRandomSuffix: false`), that URL never changes between publishes —
+so without `dynamic = "force-dynamic"` / `fetchCache = "force-no-store"` on the route,
+Next just kept serving whatever it fetched the very first time, forever, no matter how
+many times the blob was republished. Bit this project twice (Arcadia Senior Living,
+2026-09; The Point Acupuncture, 2026-10) before it was tracked down — see those exports
+at the top of the route file, and don't remove them without understanding why they're
+there.
